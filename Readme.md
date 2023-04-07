@@ -16,5 +16,5 @@ source env_API/bin/activate
 ```
 - Instalamos las dependencias
 ```sh
-pip3 -r requirements.txt
+pip3 install -r requirements.txt
 ```
