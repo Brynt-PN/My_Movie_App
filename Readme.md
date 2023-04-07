@@ -7,12 +7,12 @@ En este archivo creare mi primera API utilizando el Framework FasAPI
 
 - Crear un entorno virtual
 ```sh
-python3 -m venv env_API
+python3 -m venv env_Movie
 ```
 
 - Activamos el entorno
 ```sh
-source env_API/bin/activate
+source env_Movie/bin/activate
 ```
 - Instalamos las dependencias
 ```sh
