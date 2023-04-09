@@ -155,26 +155,39 @@ def create_movie(movie: Movie):
 
 #PUT MOVIE FOR ID
 @app.put('/movies/{id}', tags=['MOVIES'], response_model= dict, status_code = 200, dependencies=[Depends(JWTBearer())])
-def update_movies(id: int, movie: Movie): 
-    for item in movies: 
-        if item['id'] == id: 
-            item['title'] = movie.title 
-            item['overview'] = movie.overview
-            item['year'] = movie.year
-            item['rating'] = movie.rating
-            item['category'] = movie.category 
-            return JSONResponse(content= {'message':'Se ha modificado la pelicula'})
-    return JSONResponse(status_code = 404, content='ID invalido')
+def update_movies(id: int, movie: Movie):
+    db = session()
+    #Filtramos por ID
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+    #Corroboramos que la pelicula exista
+    if not result:
+        return JSONResponse(status_code = 404, content='ID invalido')
+    #Cambiamos el valor de los datos
+    result.title = movie.title #Accedemos al parametro title de Result y lo actualizamos con el del parametro title de Movie.
+    result.overview = movie.overview
+    result.year = movie.year
+    result.rating = movie.rating
+    result.category = movie.category
+    #Guardamos los cambios ejecutados
+    db.commit()
+    return JSONResponse(content= {'message':'Se ha modificado la pelicula'})
+    
 
 #DELETE MOVIE FOR ID
 @app.delete('/movie{id}', tags=['MOVIES'], response_model= dict, status_code = 200, dependencies=[Depends(JWTBearer())])
 def delete_movie(id: int):
-    for item in movies: 
-        if item['id'] == id: 
-            movies.remove(item)
-            return JSONResponse(content= {'message':'Se ha eliminado la pelicula'})
-    return JSONResponse(status_code = 404, content='ID invalido')
-
+    db = session()
+    #Filtramos por ID
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+    #Corroboramos que la pelicula exista
+    if not result:
+        return JSONResponse(status_code = 404, content='ID invalido')
+    #Usamos el metodo DELETE para eliminar el registro
+    db.delete(result)
+    #Guardamos los cambios
+    db.commit()
+    return JSONResponse(status_code=200,content= 'Se ha eliminado la pelicula')
+    
 
 
 
