@@ -21,7 +21,7 @@ engine = create_engine(database_url, echo=True) # Dividimos esta parte de la sig
 # create_engine() : Es la función que crea el motor de base de datos y lo almacena en la ruta que guardamos en la bariable 'database_url'.
 # El motor de base de datos no es un archivo, es mas bien un sofware que administra los datos de la base de datos SQLITE, al ejecutar esta linea de codigo se creara el archivo en la dirección que determinamos.
 # echo=True : Esto permite que cuando hagamos consultas de SQL se muestre en la consola (La shell o el bash) mensajes de lo que se esta ejecutando en la base de datos
-# OBS: estos mensajes osn predeterminados por SQLArchemy por tanto no tenemos que escribir ninuguna linea de código adicional y no lo determinamos nosotros.
+# OBS: estos mensajes son predeterminados por SQLArchemy por tanto no tenemos que escribir ninuguna linea de código adicional y no lo determinamos nosotros.
 
 session = sessionmaker(bind=engine) # Creamos un Manejador de sessiones
 # SESSIONMAKER() : Resive como parametro el motor de base de datos y nos debuelbe una CLASE (class)
