@@ -5,8 +5,9 @@ from pydantic import BaseModel, Field
 from typing import Optional, List 
 from jwt_manager import create_token, validate_token
 from fastapi.security import HTTPBearer
-from config.database import Base, session, engine
+from config.database import Base, session, engine #Importamos las clases de nuestra BD
 from models.movie import Movie as MovieModel #Importamos la clase Movie como MocieModel para que no se cruce con la clase Movie de la linea 34
+from fastapi.encoders import jsonable_encoder #Importamos esto para poder convertir un objeto en una respuesta con formato JSON (Linea 96)
 
 app = FastAPI() 
 app.title = 'Mi First API con FastAPI' 
@@ -35,7 +36,7 @@ class JWTBearer(HTTPBearer):
 class Movie(BaseModel):
     id: Optional[int] = None 
     title: str = Field(default= 'Mi Pelicula', min_length= 5, max_length= 15)
-    overview: str = Field(min_length= 15, max_length= 50)
+    overview: str = Field(min_length= 15, max_length= 500)
     year: int = Field(le= 2024) 
     rating: float = Field(ge = 1, le= 10)
     category: str 
@@ -88,26 +89,47 @@ movies = [
 ]
 
 #GET MOVIE
-@app.get('/movies',tags=['MOVIES'], status_code=200, response_model=List[Movie]) 
+@app.get('/movies',tags=['MOVIES'], status_code=200, response_model=List[Movie], dependencies=[Depends(JWTBearer())]) 
 def get_movies():
-    return JSONResponse(content=movies) 
+    #Creamos una session para la consulta
+    db = session()
+    #Usamos el metodo QUERY de SQLAlchemy para consultar el contenido de la tabla
+    result = db.query(MovieModel).all()
+    #El metodo QUERY recive como parametro la tabla a consultar.
+    #El metodo ALL indica que se muestre todos los registros de una TABLA.
+
+    return JSONResponse(content=jsonable_encoder(result)) #Aqui usamos 'jsonable_encoder' para darle formato JSON a la lista de objetos resultantes.
 
 #GET MOVIE FOR ID
-@app.get('/movies/{id}', tags=['MOVIES'])
+@app.get('/movies/{id}', tags=['MOVIES'], dependencies=[Depends(JWTBearer())])
 def get_movie(id: int = Path(ge=1,le=2000)) -> Movie: 
-    for item in movies:
-        if item['id'] == id:
-            return JSONResponse(content=item) 
-    return JSONResponse(status_code = 404, content='ID invalido')
+    # Creamos una Instarncia de Session
+    db = session()
+    #Aacemos una consulta a la BD y filtramos
+    result =  db.query(MovieModel).filter(MovieModel.id == id).first()
+    #QUERY : Hacemos la consluta a la TABLA
+    #FILTET : Filtramos y pasamos los parametros de filtro, en este caso indicamos que 'MocieModel.id' (El parametro id del objeto) debe ser igual a 'id' (El parametro que recive este metodo GET '(id: int = Path(ge=1,le=2000))' )
+    #FIRST : Indica que devuelva el primer resultado o coincidencia.
+
+    #Validamos que el resultado no este vacio
+    if not result:
+        #Devolvemos un mensaje de error.
+        return JSONResponse(status_code = 404, content='ID invalido')
+    #Devolvemos el resultado obtenido y lo pasamos con formato JSON
+    return JSONResponse(status_code = 200, content=jsonable_encoder(result))
 
 #GET MOVIE BY CATEGORY
 @app.get('/movies/', tags=['MOVIES'], response_model = List[Movie], dependencies=[Depends(JWTBearer())]) 
 def get_movies_by_category(category: str =  Query(min_length = 5, max_length =15 )):
-    data = [item for item in movies if item['category'] == category]
-    return JSONResponse(status_code=200 ,content=data)
+    db = session()
+    #A diferencia del ejemplo anterior en filtrado por ID, usamos ALL y no First, por que queremos que nos devulva todos las peliculas de la categoria que ingresemos.
+    result = db.query(MovieModel).filter(MovieModel.category == category).all()
+    if not result:
+        return JSONResponse(status_code=404, content='Invalid Category')
+    return JSONResponse(status_code=200 ,content=jsonable_encoder(result))
 
 #POST MOVIE
-@app.post('/movies', tags=['MOVIES'], response_model= dict) 
+@app.post('/movies', tags=['MOVIES'], response_model= dict, dependencies=[Depends(JWTBearer())]) 
 def create_movie(movie: Movie):
     #Ahora agregaremos la nueva pelicula a la BD
 
@@ -119,6 +141,7 @@ def create_movie(movie: Movie):
     #movie : Recordemos que el parametro movie lo instauramos a partir de la clase Movie '(movie: Movie)'
     #.dict() : Aqui convertimos al objeto en un diccionario.
     # ** : Con este Operador de Python desempaquetamos los valores del diccionario y lo obtenemos en el formato (Clave='Valor'), esto nos ayuda a poder pasar el contenido de un diccionario como parametros de una función o en este caso de una clase.
+    # OBS: Para que '**' funcione, las claves del Dic deben coincidir con el nombre de los aprametros que requiere la clase o función, de otro modo botara error.
 
     #Añadimos la Nueva pelicula a la BD,  recordemos que 'bd' es una instaciá de la session, es decir una conexión temporal a la BD
     db.add(new_movie)
@@ -131,7 +154,7 @@ def create_movie(movie: Movie):
     return JSONResponse(status_code = 201, content= {'message':'Se ha registrado la pelicula'}) 
 
 #PUT MOVIE FOR ID
-@app.put('/movies/{id}', tags=['MOVIES'], response_model= dict, status_code = 200)
+@app.put('/movies/{id}', tags=['MOVIES'], response_model= dict, status_code = 200, dependencies=[Depends(JWTBearer())])
 def update_movies(id: int, movie: Movie): 
     for item in movies: 
         if item['id'] == id: 
@@ -144,7 +167,7 @@ def update_movies(id: int, movie: Movie):
     return JSONResponse(status_code = 404, content='ID invalido')
 
 #DELETE MOVIE FOR ID
-@app.delete('/movie{id}', tags=['MOVIES'], response_model= dict, status_code = 200)
+@app.delete('/movie{id}', tags=['MOVIES'], response_model= dict, status_code = 200, dependencies=[Depends(JWTBearer())])
 def delete_movie(id: int):
     for item in movies: 
         if item['id'] == id: 
