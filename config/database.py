@@ -3,7 +3,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-sqlite_file_name = 'database.sqlite'# Aqui damos nombre a el archivo de las BASE DE DATOS SQLITE (por eso la terminación '.sqlite')
+sqlite_file_name = '../database.sqlite'# Aqui damos nombre a el archivo de las BASE DE DATOS SQLITE (por eso la terminación '.sqlite')
+# ../ : Esto nos indica que retroceda una carpeta, lo hacemos para que al crear la base de datos se cree en la carpeta principal y no dentro de config.
+
 base_dir = os.path.dirname(os.path.realpath(__file__)) # En esta parte la podemos subdividir.
 # __FILE__ : Es una palabra reservada que hace referencia al archivo en el que se ejecuta
 # OS.PATH.REALPATH(__FILE__) : Una funcipon que nos permite obtener la ruta absoluta del parametro que se le pase, em -> (/home/brynt/archivo.txt)
@@ -27,5 +29,5 @@ session = sessionmaker(bind=engine) # Creamos un Manejador de sessiones
 # SESSIONMAKER() : Resive como parametro el motor de base de datos y nos debuelbe una CLASE (class)
 # Session : Es una clase creada a partir de 'sessionmaker()' y nos permite crear sesiones (objetos), que nos permitira hacer consultas eh interactuar con la base de dastos SQLITE
 
-base = declarative_base() # Creamos una Clase 'base', esta clase nos sirve para poder crear de manera mas facil las tablas de nuestra BD, y tambien tiene las funcionalidades CRUD de la base de datos.
+Base = declarative_base() # Creamos una Clase 'base', esta clase nos sirve para poder crear de manera mas facil las tablas de nuestra BD, y tambien tiene las funcionalidades CRUD de la base de datos.
 # Nos permite crear una tabla como crear un objeto en Python, siendo las caracteristicas las filas y columbas (Datos a llenar) y las funcionalidades seria el CRUD

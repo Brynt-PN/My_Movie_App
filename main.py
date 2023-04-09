@@ -5,10 +5,14 @@ from pydantic import BaseModel, Field
 from typing import Optional, List 
 from jwt_manager import create_token, validate_token
 from fastapi.security import HTTPBearer
+from config.database import Base, session, engine
+from models.movie import Movie
 
 app = FastAPI() 
 app.title = 'Mi First API con FastAPI' 
 app.version = '0.0.1' 
+
+Base.metadata.create_all(bind=engine)
 
 
 class User(BaseModel): 
