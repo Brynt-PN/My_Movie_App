@@ -6,20 +6,24 @@ from typing import Optional, List
 from jwt_manager import create_token, validate_token
 from fastapi.security import HTTPBearer
 from config.database import Base, session, engine
-from models.movie import Movie
+from models.movie import Movie as MovieModel #Importamos la clase Movie como MocieModel para que no se cruce con la clase Movie de la linea 34
 
 app = FastAPI() 
 app.title = 'Mi First API con FastAPI' 
 app.version = '0.0.1' 
 
-Base.metadata.create_all(bind=engine)
+#Aquí creamos todas las Tablas generadas en nuestro modelo
+Base.metadata.create_all(bind=engine) # Subdividimos en lo siguiente:
+# BASE : Esta es la clase que instauramos anteriormente de Declarative_base, que sirve para crear Tablas en la BD
+# METADATA : Este es un objeto que BASE (declarative_base) ya tiene incorporado y que contiene la informacipon de las tablas creadas a partir de BASE (HEREDAN)
+# CREATE_ALL : Es un metodo de METADATA que crea todas las tablas que heredan de BASE que aun no han sido creadas.
 
-
+# Clase Usuari
 class User(BaseModel): 
     email: str 
     password: str
 
-
+# Autentificación de Token
 class JWTBearer(HTTPBearer): 
     async def __call__(self, request: Request): 
         auth = await super().__call__(request) 
@@ -27,6 +31,7 @@ class JWTBearer(HTTPBearer):
         if data['email'] != 'admin@gmail.com': 
             raise HTTPException(status_code=403, detail='Credenciales invalidas')
 
+#Calse Movie 
 class Movie(BaseModel):
     id: Optional[int] = None 
     title: str = Field(default= 'Mi Pelicula', min_length= 5, max_length= 15)
@@ -35,6 +40,7 @@ class Movie(BaseModel):
     rating: float = Field(ge = 1, le= 10)
     category: str 
 
+    #Configuración predeterminada de Movie
     class Config:
         schema_extra = {
             'example': {
@@ -48,11 +54,12 @@ class Movie(BaseModel):
         }
 
 
-
+#GET HOLA MUNDO
 @app.get('/', tags=['HOME']) 
 def message():
     return HTMLResponse('<h1>HOLA MUNDO</h1>')
 
+#LOGIN
 @app.post('/login', tags=['Auth']) 
 def login(user: User):
     if user.email == 'admin@gmail.com' and user.password == 'admin':
@@ -60,6 +67,7 @@ def login(user: User):
         return JSONResponse(content=token, status_code=200) 
     return JSONResponse(status_code=400,content='User or password invalido')
 
+#MOVIE LIST
 movies = [
     {
         'id': 1,
@@ -79,11 +87,12 @@ movies = [
     } 
 ]
 
-
+#GET MOVIE
 @app.get('/movies',tags=['MOVIES'], status_code=200, response_model=List[Movie]) 
 def get_movies():
     return JSONResponse(content=movies) 
 
+#GET MOVIE FOR ID
 @app.get('/movies/{id}', tags=['MOVIES'])
 def get_movie(id: int = Path(ge=1,le=2000)) -> Movie: 
     for item in movies:
@@ -91,16 +100,37 @@ def get_movie(id: int = Path(ge=1,le=2000)) -> Movie:
             return JSONResponse(content=item) 
     return JSONResponse(status_code = 404, content='ID invalido')
 
+#GET MOVIE BY CATEGORY
 @app.get('/movies/', tags=['MOVIES'], response_model = List[Movie], dependencies=[Depends(JWTBearer())]) 
 def get_movies_by_category(category: str =  Query(min_length = 5, max_length =15 )):
     data = [item for item in movies if item['category'] == category]
     return JSONResponse(status_code=200 ,content=data)
 
+#POST MOVIE
 @app.post('/movies', tags=['MOVIES'], response_model= dict) 
-def create_movie(movie: Movie): 
+def create_movie(movie: Movie):
+    #Ahora agregaremos la nueva pelicula a la BD
 
-    movies.append(movie) 
+    #Primero abrimos una session (Una conección temporal a la BD)
+    db = session() # Aqui isnstauramos de la clase Session
+
+    #Instauramos de la calse MOVIEMODEL un nuebo objeto y lo guardamos en una variable
+    new_movie = MovieModel(**movie.dict()) # Aqui subdividimos:
+    #movie : Recordemos que el parametro movie lo instauramos a partir de la clase Movie '(movie: Movie)'
+    #.dict() : Aqui convertimos al objeto en un diccionario.
+    # ** : Con este Operador de Python desempaquetamos los valores del diccionario y lo obtenemos en el formato (Clave='Valor'), esto nos ayuda a poder pasar el contenido de un diccionario como parametros de una función o en este caso de una clase.
+
+    #Añadimos la Nueva pelicula a la BD,  recordemos que 'bd' es una instaciá de la session, es decir una conexión temporal a la BD
+    db.add(new_movie)
+
+    #Guardamos los cambios realizados
+    db.commit()
+
+    #IMPORTANTE : Si los cambios no se guardan, solo permaneceran durante la session y no podran ser vistos desde otras sessiones diferentes.
+
     return JSONResponse(status_code = 201, content= {'message':'Se ha registrado la pelicula'}) 
+
+#PUT MOVIE FOR ID
 @app.put('/movies/{id}', tags=['MOVIES'], response_model= dict, status_code = 200)
 def update_movies(id: int, movie: Movie): 
     for item in movies: 
@@ -113,6 +143,7 @@ def update_movies(id: int, movie: Movie):
             return JSONResponse(content= {'message':'Se ha modificado la pelicula'})
     return JSONResponse(status_code = 404, content='ID invalido')
 
+#DELETE MOVIE FOR ID
 @app.delete('/movie{id}', tags=['MOVIES'], response_model= dict, status_code = 200)
 def delete_movie(id: int):
     for item in movies: 
