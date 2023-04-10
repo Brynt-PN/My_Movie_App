@@ -5,19 +5,16 @@ from pydantic import BaseModel, Field
 from typing import Optional, List 
 from jwt_manager import create_token, validate_token
 from fastapi.security import HTTPBearer
-from config.database import Base, session, engine #Importamos las clases de nuestra BD
-from models.movie import Movie as MovieModel #Importamos la clase Movie como MocieModel para que no se cruce con la clase Movie de la linea 34
-from fastapi.encoders import jsonable_encoder #Importamos esto para poder convertir un objeto en una respuesta con formato JSON (Linea 96)
+from config.database import Base, session, engine
+from models.movie import Movie as MovieModel 
+from fastapi.encoders import jsonable_encoder 
 
 app = FastAPI() 
 app.title = 'Mi First API con FastAPI' 
 app.version = '0.0.1' 
 
 #Aquí creamos todas las Tablas generadas en nuestro modelo
-Base.metadata.create_all(bind=engine) # Subdividimos en lo siguiente:
-# BASE : Esta es la clase que instauramos anteriormente de Declarative_base, que sirve para crear Tablas en la BD
-# METADATA : Este es un objeto que BASE (declarative_base) ya tiene incorporado y que contiene la informacipon de las tablas creadas a partir de BASE (HEREDAN)
-# CREATE_ALL : Es un metodo de METADATA que crea todas las tablas que heredan de BASE que aun no han sido creadas.
+Base.metadata.create_all(bind=engine)
 
 # Clase Usuari
 class User(BaseModel): 
@@ -91,38 +88,23 @@ movies = [
 #GET MOVIE
 @app.get('/movies',tags=['MOVIES'], status_code=200, response_model=List[Movie], dependencies=[Depends(JWTBearer())]) 
 def get_movies():
-    #Creamos una session para la consulta
     db = session()
-    #Usamos el metodo QUERY de SQLAlchemy para consultar el contenido de la tabla
     result = db.query(MovieModel).all()
-    #El metodo QUERY recive como parametro la tabla a consultar.
-    #El metodo ALL indica que se muestre todos los registros de una TABLA.
-
-    return JSONResponse(content=jsonable_encoder(result)) #Aqui usamos 'jsonable_encoder' para darle formato JSON a la lista de objetos resultantes.
+    return JSONResponse(content=jsonable_encoder(result)) 
 
 #GET MOVIE FOR ID
 @app.get('/movies/{id}', tags=['MOVIES'], dependencies=[Depends(JWTBearer())])
-def get_movie(id: int = Path(ge=1,le=2000)) -> Movie: 
-    # Creamos una Instarncia de Session
+def get_movie(id: int = Path(ge=1,le=2000)) -> Movie:     
     db = session()
-    #Aacemos una consulta a la BD y filtramos
-    result =  db.query(MovieModel).filter(MovieModel.id == id).first()
-    #QUERY : Hacemos la consluta a la TABLA
-    #FILTET : Filtramos y pasamos los parametros de filtro, en este caso indicamos que 'MocieModel.id' (El parametro id del objeto) debe ser igual a 'id' (El parametro que recive este metodo GET '(id: int = Path(ge=1,le=2000))' )
-    #FIRST : Indica que devuelva el primer resultado o coincidencia.
-
-    #Validamos que el resultado no este vacio
-    if not result:
-        #Devolvemos un mensaje de error.
+    result =  db.query(MovieModel).filter(MovieModel.id == id).first()    
+    if not result:        
         return JSONResponse(status_code = 404, content='ID invalido')
-    #Devolvemos el resultado obtenido y lo pasamos con formato JSON
     return JSONResponse(status_code = 200, content=jsonable_encoder(result))
 
 #GET MOVIE BY CATEGORY
 @app.get('/movies/', tags=['MOVIES'], response_model = List[Movie], dependencies=[Depends(JWTBearer())]) 
 def get_movies_by_category(category: str =  Query(min_length = 5, max_length =15 )):
     db = session()
-    #A diferencia del ejemplo anterior en filtrado por ID, usamos ALL y no First, por que queremos que nos devulva todos las peliculas de la categoria que ingresemos.
     result = db.query(MovieModel).filter(MovieModel.category == category).all()
     if not result:
         return JSONResponse(status_code=404, content='Invalid Category')
@@ -131,44 +113,24 @@ def get_movies_by_category(category: str =  Query(min_length = 5, max_length =15
 #POST MOVIE
 @app.post('/movies', tags=['MOVIES'], response_model= dict, dependencies=[Depends(JWTBearer())]) 
 def create_movie(movie: Movie):
-    #Ahora agregaremos la nueva pelicula a la BD
-
-    #Primero abrimos una session (Una conección temporal a la BD)
-    db = session() # Aqui isnstauramos de la clase Session
-
-    #Instauramos de la calse MOVIEMODEL un nuebo objeto y lo guardamos en una variable
-    new_movie = MovieModel(**movie.dict()) # Aqui subdividimos:
-    #movie : Recordemos que el parametro movie lo instauramos a partir de la clase Movie '(movie: Movie)'
-    #.dict() : Aqui convertimos al objeto en un diccionario.
-    # ** : Con este Operador de Python desempaquetamos los valores del diccionario y lo obtenemos en el formato (Clave='Valor'), esto nos ayuda a poder pasar el contenido de un diccionario como parametros de una función o en este caso de una clase.
-    # OBS: Para que '**' funcione, las claves del Dic deben coincidir con el nombre de los aprametros que requiere la clase o función, de otro modo botara error.
-
-    #Añadimos la Nueva pelicula a la BD,  recordemos que 'bd' es una instaciá de la session, es decir una conexión temporal a la BD
+    db = session()
+    new_movie = MovieModel(**movie.dict())
     db.add(new_movie)
-
-    #Guardamos los cambios realizados
     db.commit()
-
-    #IMPORTANTE : Si los cambios no se guardan, solo permaneceran durante la session y no podran ser vistos desde otras sessiones diferentes.
-
-    return JSONResponse(status_code = 201, content= {'message':'Se ha registrado la pelicula'}) 
+    return JSONResponse(status_code = 201, content='Se ha registrado la pelicula') 
 
 #PUT MOVIE FOR ID
 @app.put('/movies/{id}', tags=['MOVIES'], response_model= dict, status_code = 200, dependencies=[Depends(JWTBearer())])
 def update_movies(id: int, movie: Movie):
     db = session()
-    #Filtramos por ID
     result = db.query(MovieModel).filter(MovieModel.id == id).first()
-    #Corroboramos que la pelicula exista
     if not result:
         return JSONResponse(status_code = 404, content='ID invalido')
-    #Cambiamos el valor de los datos
-    result.title = movie.title #Accedemos al parametro title de Result y lo actualizamos con el del parametro title de Movie.
+    result.title = movie.title
     result.overview = movie.overview
     result.year = movie.year
     result.rating = movie.rating
     result.category = movie.category
-    #Guardamos los cambios ejecutados
     db.commit()
     return JSONResponse(content= {'message':'Se ha modificado la pelicula'})
     
@@ -177,14 +139,10 @@ def update_movies(id: int, movie: Movie):
 @app.delete('/movie{id}', tags=['MOVIES'], response_model= dict, status_code = 200, dependencies=[Depends(JWTBearer())])
 def delete_movie(id: int):
     db = session()
-    #Filtramos por ID
     result = db.query(MovieModel).filter(MovieModel.id == id).first()
-    #Corroboramos que la pelicula exista
     if not result:
         return JSONResponse(status_code = 404, content='ID invalido')
-    #Usamos el metodo DELETE para eliminar el registro
     db.delete(result)
-    #Guardamos los cambios
     db.commit()
     return JSONResponse(status_code=200,content= 'Se ha eliminado la pelicula')
     
