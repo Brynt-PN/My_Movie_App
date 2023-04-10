@@ -170,7 +170,7 @@ def update_movies(id: int, movie: Movie):
     result.category = movie.category
     #Guardamos los cambios ejecutados
     db.commit()
-    return JSONResponse(content= {'message':'Se ha modificado la pelicula'})
+    return JSONResponse(content='Se ha modificado la pelicula')
     
 
 #DELETE MOVIE FOR ID
@@ -189,6 +189,7 @@ def delete_movie(id: int):
     return JSONResponse(status_code=200,content= 'Se ha eliminado la pelicula')
     
 
+#EL CPODIGO CONTINUA EN MASTER
 
 
 
