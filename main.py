@@ -8,10 +8,13 @@ from fastapi.security import HTTPBearer
 from config.database import Base, session, engine
 from models.movie import Movie as MovieModel 
 from fastapi.encoders import jsonable_encoder 
+from middlewares.error_handler import ErrorHandler #Importamos nuestro manejador de errores
 
 app = FastAPI() 
 app.title = 'Mi First API con FastAPI' 
 app.version = '0.0.1' 
+
+app.add_middleware(ErrorHandler)
 
 #Aquí creamos todas las Tablas generadas en nuestro modelo
 Base.metadata.create_all(bind=engine)
