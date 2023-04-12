@@ -8,8 +8,8 @@ from routers.user import user_router
 
 #Instanciamos la APP
 app = FastAPI() 
-app.title = 'Mi First API con FastAPI' 
-app.version = '0.0.1' 
+app.title = 'Mi Movie App' 
+app.version = '0.0.3' 
 
 #Añadimos el controlador de errores
 app.add_middleware(ErrorHandler)
